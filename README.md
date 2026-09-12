@@ -28,7 +28,7 @@ da rede — sem precisar ir de biblioteca em biblioteca fisicamente.
 
 | Perfil | Descrição |
 |--------|-----------|
-| **Usuário da Comunidade** | Busca livros, faz reservas, solicita transferências, acompanha empréstimos |
+| **Usuário Comum** | Busca livros, faz reservas, solicita transferências, acompanha empréstimos, registrar interesse em livros | 
 | **Bibliotecário/Voluntário** | Gerencia o acervo da sua unidade, registra empréstimos e devoluções |
 | **Administrador da Rede** | Gerencia todas as unidades, aprova transferências, analisa demandas de aquisição |
 
