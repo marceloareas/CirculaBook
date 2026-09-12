@@ -36,7 +36,7 @@ da rede — sem precisar ir de biblioteca em biblioteca fisicamente.
 
 - **Backend**: Java 17 + Spring Boot 3
 - **Banco de dados**: PostgreSQL 15
-- **Frontend**: React (em desenvolvimento)
+- **Frontend**: React 
 - **Build**: Maven
 - **Docker**
 
