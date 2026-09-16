@@ -1,4 +1,15 @@
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../auth/AuthContext";
+
 export function Header() {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login", { replace: true });
+  };
+
   return (
     <header className="bg-[#2563eb] text-white">
       <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-6">
@@ -28,19 +39,31 @@ export function Header() {
           <span>Meu Histórico</span>
         </nav>
 
-        <div className="flex items-center gap-2 text-sm">
-          <svg
-            viewBox="0 0 24 24"
-            className="h-4 w-4"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            aria-hidden="true"
+        <div className="flex items-center gap-3 text-sm">
+          <div className="flex items-center gap-2">
+            <svg
+              viewBox="0 0 24 24"
+              className="h-4 w-4"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              aria-hidden="true"
+            >
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+              <circle cx="12" cy="7" r="4" />
+            </svg>
+            <span>
+              {user?.name} - {user?.role}
+            </span>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="rounded-full bg-white/15 px-3 py-1.5 text-xs font-medium hover:bg-white/25"
           >
-            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-            <circle cx="12" cy="7" r="4" />
-          </svg>
-          <span>Ana Souza - Usuário da Comunidade</span>
+            Sair
+          </button>
         </div>
       </div>
     </header>

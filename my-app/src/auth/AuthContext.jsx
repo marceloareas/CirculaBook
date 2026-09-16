@@ -22,6 +22,18 @@ function readStoredSession() {
   }
 }
 
+
+// Função temporaria ate ser adicionado o registro ou mais features para conta do usuario
+function deriveNameFromEmail(email) {
+  const localPart = email.split("@")[0] || "";
+
+  return localPart
+    .split(/[._-]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => readStoredSession());
 
@@ -33,7 +45,7 @@ export function AuthProvider({ children }) {
 
       const session = {
         email,
-        name: "Ana Souza",
+        name: deriveNameFromEmail(email),
         role: "Usuário da Comunidade",
       };
 
