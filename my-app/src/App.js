@@ -3,6 +3,7 @@ import { AuthProvider } from "./auth/AuthContext";
 import { ProtectedRoute } from "./auth/ProtectedRoute";
 import { HomePage } from "./pages/HomePage";
 import { LoginPage } from "./pages/LoginPage";
+import { BookDetailsPage } from "./pages/BookDetailsPage";
 
 function App() {
   return (
@@ -17,6 +18,14 @@ function App() {
             element={
               <ProtectedRoute>
                 <HomePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/livros/:slug"
+            element={
+              <ProtectedRoute>
+                <BookDetailsPage />
               </ProtectedRoute>
             }
           />
