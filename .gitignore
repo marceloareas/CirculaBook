@@ -1,0 +1,25 @@
+# Dependencias do frontend
+**/node_modules/
+
+# Builds e caches do frontend
+**/dist/
+**/.vite/
+
+# Artefatos do Maven/Java
+**/target/
+*.class
+
+# Metadados locais de IDE
+.classpath
+.project
+.settings/
+.vscode/
+
+# Arquivos locais e segredos
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+

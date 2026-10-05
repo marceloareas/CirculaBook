@@ -1,0 +1,35 @@
+@import "tailwindcss";
+
+/* Tokens extraídos do protótipo do Figma "Protótipo 2" */
+@theme {
+  --color-circula-blue: #1976d2;
+  --color-circula-blue-dark: #125ca8;
+  --color-circula-blue-soft: #e8f0fc;
+  --color-circula-blue-callout: #deedfc;
+  --color-circula-green: #388e3c;
+  --color-circula-green-soft: #dbf0db;
+  --color-circula-orange: #f57c00;
+  --color-circula-orange-soft: #ffecd0;
+  --color-circula-red: #d32f2f;
+  --color-circula-red-soft: #fce5e5;
+  --color-circula-dark: #2c3e50;
+  --color-circula-gray: #66707d;
+  --color-circula-bg: #f5f7fa;
+  --color-circula-border: #e0e0e0;
+}
+
+html, body, #root {
+  min-height: 100%;
+}
+
+body {
+  font-family: Inter, "Segoe UI", system-ui, -apple-system, sans-serif;
+  background: var(--color-circula-bg);
+  color: var(--color-circula-dark);
+}
+
+/* Foco visível para navegação por teclado */
+:where(button, a, input, select, textarea):focus-visible {
+  outline: 2px solid var(--color-circula-blue);
+  outline-offset: 2px;
+}
