@@ -1,9 +1,10 @@
 /**
  * TELA 6 — Registrar Devolução (UC10).
  * Mostra o cálculo de atraso e o bloqueio resultante (RN12) antes de confirmar.
+ * Se houver fila do título, o exemplar fica reservado para o 1º da fila.
  */
 import { useEffect, useState } from "react";
-import { api, nomeExemplar, diasDeAtraso, formatarData, destinoAposDevolucao } from "../api/client";
+import { api, nomeExemplar, diasDeAtraso, formatarData } from "../api/client";
 import type { Emprestimo } from "../types";
 import { useUsuarioLogado } from "../auth/contexto";
 import {
@@ -17,17 +18,13 @@ import {
   DuasColunas,
   Entrada,
   Erro,
-  GrupoRadio,
   LinhaResumo,
   SectionCard,
   Sucesso,
   TituloPagina,
-  Trilha,
   Vazio,
 } from "../components/ui";
 import ModalConfirmacao, { ResumoModal } from "../components/ModalConfirmacao";
-
-type Condicao = "BOM" | "DANIFICADO";
 
 const DIAS_BLOQUEIO_POR_ATRASO = 2; // RN12
 
@@ -36,7 +33,6 @@ export default function RegistrarDevolucao() {
   const [emprestimos, setEmprestimos] = useState<Emprestimo[]>([]);
   const [busca, setBusca] = useState("");
   const [selecionado, setSelecionado] = useState<Emprestimo | null>(null);
-  const [condicao, setCondicao] = useState<Condicao>("BOM");
 
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState("");
@@ -80,22 +76,18 @@ export default function RegistrarDevolucao() {
     try {
       const devolvido = await api.post<Emprestimo>("/emprestimos/devolver", {
         emprestimoId: selecionado.id,
-        condicaoExemplar: condicao,
       });
-      const destino = condicao === "DANIFICADO" ? "" : destinoAposDevolucao(devolvido?.exemplar?.status);
+      const comFila = devolvido?.exemplar?.status === "RESERVADO";
       setSucesso(
         (atraso > 0
           ? `Devolução registrada com ${atraso} dia(s) de atraso. ${selecionado.usuario.nome} ` +
               `ficou bloqueado por ${atraso * DIAS_BLOQUEIO_POR_ATRASO} dias.`
-          : condicao === "DANIFICADO"
-            ? "Devolução registrada. O exemplar danificado saiu de circulação (indisponível)."
-            : destino
-              ? "Devolução registrada dentro do prazo."
-              : "Devolução registrada dentro do prazo. O exemplar voltou para o acervo.") +
-          (destino ? ` ${destino}` : ""),
+          : "Devolução registrada dentro do prazo.") +
+          (comFila
+            ? " O exemplar ficou reservado para o 1º da fila de espera, que tem 3 dias para retirá-lo."
+            : " O exemplar voltou para o acervo (disponível)."),
       );
       setSelecionado(null);
-      setCondicao("BOM");
       carregar();
     } catch (e) {
       setErro((e as Error).message);
@@ -109,15 +101,9 @@ export default function RegistrarDevolucao() {
 
   return (
     <>
-      <Trilha
-        itens={[
-          { rotulo: "Painel da Biblioteca" },
-          { rotulo: "Registrar Devolução" },
-        ]}
-      />
       <TituloPagina
         titulo="Registrar Devolução"
-        subtitulo={`${bibliotecaNome ?? ""} · registre a devolução e a condição do exemplar`}
+        subtitulo={`${bibliotecaNome ?? ""} · escolha o empréstimo e registre a devolução`}
       />
 
       {erro && <Erro mensagem={erro} />}
@@ -127,7 +113,7 @@ export default function RegistrarDevolucao() {
         esquerda={
           <>
             <SectionCard titulo="1. Buscar exemplar emprestado">
-              <Campo label="Nome do usuário, título ou nº do exemplar">
+              <Campo label="Nome do usuário ou título">
                 <Entrada
                   value={busca}
                   onChange={(e) => setBusca(e.target.value)}
@@ -203,22 +189,6 @@ export default function RegistrarDevolucao() {
               </div>
             </SectionCard>
 
-            <SectionCard titulo="3. Condição do exemplar">
-              <GrupoRadio<Condicao>
-                valor={condicao}
-                onChange={setCondicao}
-                opcoes={[
-                  { valor: "BOM", rotulo: "Bom estado" },
-                  { valor: "DANIFICADO", rotulo: "Danificado" },
-                ]}
-              />
-              {condicao !== "BOM" && (
-                <p className="mt-3 text-[13px] text-[#66707d]">
-                  Exemplares danificados saem de circulação (status
-                  INDISPONIVEL) e o evento é registrado no histórico.
-                </p>
-              )}
-            </SectionCard>
           </>
         }
         direita={
@@ -240,9 +210,9 @@ export default function RegistrarDevolucao() {
               tipo="info"
               titulo="Atualização automática do acervo"
             >
-              O status do exemplar volta para DISPONÍVEL e o evento é registrado
-              no histórico de circulação. Se houver reserva pendente, o próximo
-              da fila é notificado.
+              Sem fila de espera, o exemplar volta para DISPONÍVEL. Se houver
+              reserva pendente nesta biblioteca, ele fica RESERVADO para o 1º da
+              fila, que tem 3 dias para retirá-lo.
             </Callout>
 
             <CardResumo
@@ -299,12 +269,6 @@ export default function RegistrarDevolucao() {
           linhas={[
             ["Livro", selecionado?.exemplar.livro.titulo ?? "—"],
             ["Usuário", selecionado?.usuario.nome ?? "—"],
-            [
-              "Condição",
-              condicao === "BOM"
-                ? "Bom estado"
-                : "Danificado",
-            ],
             ["Dias de atraso", `${atraso}`],
           ]}
         />

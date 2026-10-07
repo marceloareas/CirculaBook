@@ -34,24 +34,12 @@ public class EmprestimoService {
     @Autowired private ExemplarRepository exemplarRepository;
     @Autowired private UsuarioRepository usuarioRepository;
     @Autowired private ReservaRepository reservaRepository;
-    @Autowired private HistoricoService historicoService;
     @Autowired private FilaEsperaService filaEsperaService;
     @Autowired private EstadoExemplarService estadoExemplar;
-    @Autowired private NotificacaoService notificacoes;
-
-    public List<Emprestimo> obterTodos() {
-        return emprestimoRepository.findAll();
-    }
 
     public List<Emprestimo> obterAtivos() {
         return emprestimoRepository.findByStatusInOrderByDataPrevDevolucaoAsc(
             List.of("ATIVO", "ATRASADO"));
-    }
-
-    public List<Emprestimo> obterPorUsuario(Long usuarioId) {
-        Usuario u = usuarioRepository.findById(usuarioId)
-            .orElseThrow(() -> new RuntimeException("Usuário não encontrado: ID " + usuarioId));
-        return emprestimoRepository.findByUsuario(u);
     }
 
     /**
@@ -105,16 +93,12 @@ public class EmprestimoService {
         Usuario usuario = usuarioRepository.findById(usuarioId)
             .orElseThrow(() -> new RuntimeException("Usuário não encontrado: ID " + usuarioId));
 
-        if (Boolean.FALSE.equals(usuario.getAtivo())) {
-            throw new RuntimeException("Usuário inativo não pode realizar empréstimos.");
-        }
-
-        // §4.3 — só exemplar DISPONIVEL (T1) ou RESERVADO para quem reservou (T5/T6) pode sair
+        // Só exemplar DISPONIVEL ou RESERVADO para quem reservou pode sair
         if (!DISPONIVEL.equals(exemplar.getStatus()) && !RESERVADO.equals(exemplar.getStatus())) {
             throw new RuntimeException("O Exemplar nº " + exemplar.getId() + " não pode ser emprestado: está "
                 + StatusExemplar.rotulo(exemplar.getStatus()).toLowerCase() + ".");
         }
-     // Exemplar RESERVADO só sai para quem reservou, e só depois de liberado para retirada
+        // Exemplar RESERVADO só sai para quem reservou, e só depois de liberado para retirada
         Reserva reservaDoExemplar = null;
         if (RESERVADO.equals(exemplar.getStatus())) {
             reservaDoExemplar = reservaRepository
@@ -164,12 +148,11 @@ public class EmprestimoService {
         if (reservaDoExemplar != null) {
             reservaDoExemplar.setStatus("RETIRADA");
             reservaRepository.save(reservaDoExemplar);
-            // T5 (ainda há fila) ou T6 (fila vazia)
+            // Ainda há fila: EMPRESTADO_RESERVADO; fila vazia: EMPRESTADO
             boolean fila = estadoExemplar.temFila(exemplar.getLivro(), exemplar.getBiblioteca());
-            estadoExemplar.mudarStatus(exemplar, fila ? EMPRESTADO_RESERVADO : EMPRESTADO,
-                obsEmprestimo(usuario) + " Retirada da reserva.");
+            estadoExemplar.mudarStatus(exemplar, fila ? EMPRESTADO_RESERVADO : EMPRESTADO);
         } else {
-            estadoExemplar.mudarStatus(exemplar, EMPRESTADO, obsEmprestimo(usuario)); // T1
+            estadoExemplar.mudarStatus(exemplar, EMPRESTADO);
         }
         estadoExemplar.sincronizarMarcaDeFila(exemplar.getLivro(), exemplar.getBiblioteca());
 
@@ -182,21 +165,17 @@ public class EmprestimoService {
 
     /**
      * UC10 — Registrar devolução.
-     * Calcula atraso, aplica o bloqueio da RN12 e devolve o exemplar ao acervo (RN05).
+     * Calcula atraso, aplica o bloqueio da RN12 e devolve o exemplar ao acervo (RN05):
+     * sem fila fica DISPONIVEL; com fila fica RESERVADO para o 1º (FilaEsperaService).
      */
     @Transactional
-    public Emprestimo devolver(Long emprestimoId, String condicaoExemplar) {
+    public Emprestimo devolver(Long emprestimoId) {
 
         Emprestimo emprestimo = emprestimoRepository.findById(emprestimoId)
             .orElseThrow(() -> new RuntimeException("Empréstimo não encontrado: ID " + emprestimoId));
 
         if ("DEVOLVIDO".equals(emprestimo.getStatus())) {
             throw new RuntimeException("Este empréstimo já foi devolvido.");
-        }
-
-        String condicao = (condicaoExemplar != null) ? condicaoExemplar.toUpperCase() : "BOM";
-        if (!"BOM".equals(condicao) && !"DANIFICADO".equals(condicao)) {
-            throw new RuntimeException("A condição do exemplar na devolução deve ser Bom ou Danificado.");
         }
 
         LocalDateTime agora = LocalDateTime.now();
@@ -214,7 +193,6 @@ public class EmprestimoService {
                                  ? usuario.getBloqueadoAte() : agora;
             usuario.setBloqueadoAte(base.plusDays(diasBloqueio));
             usuarioRepository.save(usuario);
-            notificacoes.bloqueioAplicado(usuario, diasAtraso, usuario.getBloqueadoAte());
 
             log.info("[CIRCULA BOOK] Bloqueio por atraso aplicado: " + usuario.getNome()
                 + " bloqueado por " + diasBloqueio + " dias (até "
@@ -225,25 +203,9 @@ public class EmprestimoService {
 
         Exemplar exemplar = emprestimo.getExemplar();
 
-        // RN21 — DANIFICADO sai de circulação sem promover a fila (T13, §4.4);
-        //        BOM volta ao acervo ou é separado para o 1º da fila (T2/T4)
-        if ("DANIFICADO".equals(condicao)) {
-            exemplar.setEstadoConservacao("DANIFICADO");
-            estadoExemplar.mudarStatus(exemplar, INDISPONIVEL,
-                "Devolvido danificado por " + usuario.getNome() + ": retirado de circulação para avaliação.");
-        } else {
-            exemplar.setEstadoConservacao("BOM");
-            filaEsperaService.liberar(exemplar, "Devolvido por " + usuario.getNome()
-                + (diasAtraso > 0 ? " com " + diasAtraso + " dia(s) de atraso." : " dentro do prazo."));
-        }
-        estadoExemplar.sincronizarMarcaDeFila(exemplar.getLivro(), exemplar.getBiblioteca());
+        filaEsperaService.liberar(exemplar);
 
         return emprestimo;
-    }
-
-
-    private static String obsEmprestimo(Usuario usuario) {
-        return "Emprestado a " + usuario.getNome() + " por " + PRAZO_EMPRESTIMO_DIAS + " dias.";
     }
 
     public long calcularDiasAtraso(LocalDateTime previsto, LocalDateTime efetivo) {

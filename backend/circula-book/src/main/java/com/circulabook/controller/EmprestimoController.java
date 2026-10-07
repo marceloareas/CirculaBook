@@ -29,47 +29,23 @@ public class EmprestimoController {
     @Autowired
     private EmprestimoRepository emprestimoRepository;
 
-    /** Admin vê todos; bibliotecário, os da própria biblioteca; usuário comum, os seus. */
-    @GetMapping
-    public List<Emprestimo> obterTodos(@AuthenticationPrincipal Jwt jwt) {
-        Ator ator = Ator.de(jwt);
-        if (ator.ehComum()) return emprestimoService.obterPorUsuario(ator.id());
-        return recortar(ator, emprestimoService.obterTodos());
-    }
-
-    /** Tela 6 — lista de empréstimos em aberto, para escolher qual devolver. */
+    /** Tela de Devolução — empréstimos em aberto da biblioteca do bibliotecário. */
     @GetMapping("/ativos")
     public List<Emprestimo> obterAtivos(@AuthenticationPrincipal Jwt jwt) {
         return recortar(Ator.de(jwt), emprestimoService.obterAtivos());
     }
 
-    /** Para o usuário comum o ID do caminho é ignorado: vale o do token. */
-    @GetMapping("/usuario/{usuarioId}")
-    public ResponseEntity<?> obterPorUsuario(@PathVariable Long usuarioId,
-                                             @AuthenticationPrincipal Jwt jwt) {
-        Ator ator = Ator.de(jwt);
-        try {
-            if (ator.ehComum()) return ResponseEntity.ok(emprestimoService.obterPorUsuario(ator.id()));
-            return ResponseEntity.ok(recortar(ator, emprestimoService.obterPorUsuario(usuarioId)));
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
-    }
-
-    /** Tela 4 — painel de alertas: o usuário está apto? (RN01/RN12) */
+    /** Tela de Empréstimo — painel de alertas: o usuário está apto? (RN01/RN12) */
     @GetMapping("/situacao/{usuarioId}")
-    public ResponseEntity<?> consultarSituacao(@PathVariable Long usuarioId,
-                                               @AuthenticationPrincipal Jwt jwt) {
-        Ator ator = Ator.de(jwt);
+    public ResponseEntity<?> consultarSituacao(@PathVariable Long usuarioId) {
         try {
-            return ResponseEntity.ok(emprestimoService.consultarSituacao(
-                ator.ehComum() ? ator.id() : usuarioId));
+            return ResponseEntity.ok(emprestimoService.consultarSituacao(usuarioId));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
 
-    /** Tela 4 — UC09 Registrar empréstimo. O usuarioId do corpo é o tomador. */
+    /** Tela de Empréstimo — UC09 Registrar empréstimo. O usuarioId do corpo é o tomador. */
     @PostMapping("/registrar")
     public ResponseEntity<?> registrar(@RequestBody EmprestimoRequestDTO req,
                                        @AuthenticationPrincipal Jwt jwt) {
@@ -90,7 +66,7 @@ public class EmprestimoController {
         }
     }
 
-    /** Tela 6 — UC10 Registrar devolução. */
+    /** Tela de Devolução — UC10 Registrar devolução. */
     @PostMapping("/devolver")
     public ResponseEntity<?> devolver(@RequestBody DevolucaoRequestDTO req,
                                       @AuthenticationPrincipal Jwt jwt) {
@@ -104,8 +80,7 @@ public class EmprestimoController {
                 .body("Só é possível registrar devoluções de empréstimos da sua biblioteca.");
         }
         try {
-            return ResponseEntity.ok(emprestimoService.devolver(
-                req.getEmprestimoId(), req.getCondicaoExemplar()));
+            return ResponseEntity.ok(emprestimoService.devolver(req.getEmprestimoId()));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
@@ -113,7 +88,6 @@ public class EmprestimoController {
 
     /** Bibliotecário só enxerga empréstimos da própria biblioteca. */
     private List<Emprestimo> recortar(Ator ator, List<Emprestimo> lista) {
-        if (!ator.ehBibliotecario()) return lista;
         return lista.stream()
             .filter(e -> e.getBiblioteca() != null
                 && Objects.equals(e.getBiblioteca().getId(), ator.bibliotecaId()))
