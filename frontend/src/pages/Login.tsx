@@ -1,13 +1,13 @@
-/** Tela de login (e-mail + senha) dos usuários já cadastrados na base. */
+/** Tela de login (e-mail + senha) com link para o autocadastro. */
 import { useState, type FormEvent, type ReactNode } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
 import { api } from "../api/client";
 import { TELA_INICIAL, useAuth } from "../auth/contexto";
 import type { Sessao } from "../types";
 import { Botao, Campo, Card, Entrada, Erro } from "../components/ui";
 
-/** Moldura da tela de acesso, sem o menu do sistema. */
-function TelaAcesso({
+/** Moldura das telas de acesso (login e cadastro), sem o menu do sistema. */
+export function TelaAcesso({
   titulo,
   children,
 }: {
@@ -18,8 +18,12 @@ function TelaAcesso({
     <div className="min-h-screen bg-[#f5f7fa] flex items-center justify-center px-4 py-10">
       <Card className="w-full max-w-[420px] p-8 flex flex-col gap-6">
         <div className="text-center">
-          <p className="text-[22px] font-bold text-[#1976d2]">📚 Circula Book</p>
-          <h1 className="mt-2 text-[18px] font-semibold text-[#2c3e50]">{titulo}</h1>
+          <p className="text-[22px] font-bold text-[#1976d2]">
+            📚 Circula Book
+          </p>
+          <h1 className="mt-2 text-[18px] font-semibold text-[#2c3e50]">
+            {titulo}
+          </h1>
         </div>
         {children}
       </Card>
@@ -80,6 +84,15 @@ export default function Login() {
           {enviando ? "Entrando..." : "Entrar"}
         </Botao>
       </form>
+      <p className="text-center text-[14px] text-[#66707d]">
+        Ainda não tem conta?{" "}
+        <Link
+          to="/cadastro"
+          className="font-semibold text-[#1976d2] hover:underline"
+        >
+          Cadastre-se
+        </Link>
+      </p>
     </TelaAcesso>
   );
 }

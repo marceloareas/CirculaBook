@@ -183,9 +183,62 @@ export function Entrada(props: React.InputHTMLAttributes<HTMLInputElement>) {
   return <input {...props} className={`${ENTRADA} ${props.className ?? ""}`} />;
 }
 
+export function AreaTexto(
+  props: React.TextareaHTMLAttributes<HTMLTextAreaElement>,
+) {
+  return (
+    <textarea
+      {...props}
+      className={`w-full min-h-[76px] rounded-[8px] border border-[#e0e0e0] bg-white
+                  px-[14px] py-3 text-[14px] text-[#2c3e50] placeholder:text-[#9aa3ad]
+                  ${props.className ?? ""}`}
+    />
+  );
+}
+
 export function Selecao(props: React.SelectHTMLAttributes<HTMLSelectElement>) {
   return (
     <select {...props} className={`${ENTRADA} ${props.className ?? ""}`} />
+  );
+}
+
+/** Grupo de opções em formato de "pílula", como na conservação do exemplar. */
+export function GrupoRadio<T extends string>({
+  opcoes,
+  valor,
+  onChange,
+}: {
+  opcoes: { valor: T; rotulo: string; desabilitada?: boolean }[];
+  valor: T;
+  onChange: (v: T) => void;
+}) {
+  return (
+    <div className="flex flex-wrap gap-3">
+      {opcoes.map((o) => {
+        const ativo = o.valor === valor;
+        return (
+          <button
+            key={o.valor}
+            type="button"
+            onClick={() => onChange(o.valor)}
+            disabled={o.desabilitada}
+            aria-pressed={ativo}
+            aria-disabled={o.desabilitada || undefined}
+            className={`flex items-center gap-2 px-4 py-[10px] rounded-[8px] border text-[14px]
+              ${
+                o.desabilitada
+                  ? "border-[#e0e0e0] bg-[#f5f7fa] text-[#9aa3ad] cursor-not-allowed"
+                  : ativo
+                    ? "border-[#1976d2] bg-[#e8f0fc] text-[#125ca8] font-semibold"
+                    : "border-[#e0e0e0] bg-white text-[#2c3e50]"
+              }`}
+          >
+            <span aria-hidden>{ativo ? "●" : "○"}</span>
+            {o.rotulo}
+          </button>
+        );
+      })}
+    </div>
   );
 }
 

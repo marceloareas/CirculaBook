@@ -8,7 +8,12 @@
 import { useEffect, useState } from "react";
 import { Link, NavLink, useLocation } from "react-router-dom";
 import type { Perfil } from "../types";
-import { NOME_PERFIL, TELA_INICIAL, useAuth, useUsuarioLogado } from "../auth/contexto";
+import {
+  NOME_PERFIL,
+  TELA_INICIAL,
+  useAuth,
+  useUsuarioLogado,
+} from "../auth/contexto";
 
 interface ItemMenu {
   rotulo: string;
@@ -20,11 +25,19 @@ interface ItemMenu {
 const MENUS: Record<Perfil, ItemMenu[]> = {
   COMUM: [
     { rotulo: "Buscar livros", to: "/", tambem: ["/resultados", "/livro"] },
+    { rotulo: "Meus empréstimos", to: "/meus-emprestimos" },
     { rotulo: "Minhas reservas", to: "/minhas-reservas" },
   ],
   BIBLIOTECARIO: [
     { rotulo: "Empréstimo", to: "/biblioteca/emprestimo" },
     { rotulo: "Devolução", to: "/biblioteca/devolucao" },
+    { rotulo: "Cadastrar Exemplares", to: "/biblioteca/exemplares" },
+  ],
+  ADMIN: [
+    { rotulo: "Livros", to: "/admin/catalogo" },
+    { rotulo: "Categorias", to: "/admin/categorias" },
+    { rotulo: "Bibliotecas", to: "/admin/bibliotecas" },
+    { rotulo: "Bibliotecários", to: "/admin/bibliotecarios" },
   ],
 };
 
@@ -34,6 +47,7 @@ const EM_LINHA = { nav: "hidden md:flex", botao: "md:hidden" };
 const ICONE: Record<Perfil, string> = {
   COMUM: "👤",
   BIBLIOTECARIO: "🧑‍💼",
+  ADMIN: "🛡️",
 };
 
 export default function Header() {
@@ -63,7 +77,9 @@ export default function Header() {
           return vertical
             ? `block rounded-[8px] px-3 py-2 text-[14px] ${ativo ? "bg-white/20 font-semibold" : "hover:bg-white/10"}`
             : `text-[13px] whitespace-nowrap pb-1 border-b-2 ${
-                ativo ? "font-semibold border-white" : "font-normal opacity-90 border-transparent hover:opacity-100"
+                ativo
+                  ? "font-semibold border-white"
+                  : "font-normal opacity-90 border-transparent hover:opacity-100"
               }`;
         }}
       >
@@ -76,11 +92,17 @@ export default function Header() {
     <header className="bg-[#1976d2] text-white relative">
       <div className="h-[68px] px-4 sm:px-6 flex items-center justify-between gap-4">
         <div className="flex items-center gap-6 shrink-0">
-          <Link to={TELA_INICIAL[perfil]} className="text-[19px] font-bold shrink-0">
+          <Link
+            to={TELA_INICIAL[perfil]}
+            className="text-[19px] font-bold shrink-0"
+          >
             📚 Circula Book
           </Link>
 
-          <nav aria-label="Menu principal" className={`${EM_LINHA.nav} items-center gap-4`}>
+          <nav
+            aria-label="Menu principal"
+            className={`${EM_LINHA.nav} items-center gap-4`}
+          >
             {MENUS[perfil].map((item) => link(item, false))}
           </nav>
         </div>

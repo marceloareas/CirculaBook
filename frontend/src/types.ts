@@ -1,6 +1,6 @@
 // Espelha os DTOs e entidades devolvidos pelo backend Spring Boot.
 
-export type Perfil = "COMUM" | "BIBLIOTECARIO";
+export type Perfil = "COMUM" | "BIBLIOTECARIO" | "ADMIN";
 
 /** Usuário da sessão, como devolvido por /api/auth/login e /me. */
 export interface UsuarioSessao {
@@ -25,6 +25,7 @@ export interface Usuario {
   email: string;
   tipo: Perfil;
   biblioteca?: Biblioteca | null;
+  ativo: boolean;
   bloqueadoAte?: string | null;
 }
 
@@ -34,6 +35,7 @@ export interface Biblioteca {
   endereco?: string;
   email?: string;
   telefone?: string;
+  ativa?: boolean;
 }
 
 export interface Categoria {
@@ -63,6 +65,8 @@ export interface Exemplar {
     /** Emprestado e há fila do título nesta biblioteca. */
     | "EMPRESTADO_RESERVADO"
     | "RESERVADO";
+  /** NOVO | BOM | USADO */
+  estadoConservacao?: string;
 }
 
 export interface Disponibilidade {
@@ -132,6 +136,29 @@ export interface MinhaReserva {
   dataReserva: string;
   /** Só quando DISPONIVEL. */
   retireAte: string | null;
+}
+
+export interface MeuEmprestimo {
+  id: number;
+  exemplarId: number;
+  livroId: number;
+  titulo: string;
+  autor: string;
+  bibliotecaId: number;
+  biblioteca: string;
+  dataEmprestimo: string;
+  dataPrevDevolucao: string;
+  diasAtraso: number;
+  atrasado: boolean;
+}
+
+/** GET /api/conta/emprestimos. */
+export interface MeusEmprestimos {
+  emprestimos: MeuEmprestimo[];
+  total: number;
+  limite: number;
+  bloqueado: boolean;
+  bloqueadoAte: string | null;
 }
 
 /** Resposta de /api/emprestimos/situacao/{id} — alimenta os alertas da tela de empréstimo. */

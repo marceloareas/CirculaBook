@@ -29,7 +29,7 @@ public class Usuario {
     @Column(nullable = false, length = 255)
     private String senhaHash;
 
-    // COMUM | BIBLIOTECARIO
+    // COMUM | BIBLIOTECARIO | ADMIN
     @Column(nullable = false, length = 30)
     private String tipo;
 
@@ -37,6 +37,9 @@ public class Usuario {
     @ManyToOne
     @JoinColumn(name = "biblioteca_id")
     private Biblioteca biblioteca;
+
+    @Column(nullable = false)
+    private Boolean ativo = true;
 
     // RN12: data até a qual o usuário está impedido de novos empréstimos
     @Column
@@ -48,5 +51,6 @@ public class Usuario {
     @PrePersist
     public void preencheCriadoEm() {
         if (this.criadoEm == null) this.criadoEm = LocalDateTime.now();
+        if (this.ativo == null) this.ativo = true;
     }
 }

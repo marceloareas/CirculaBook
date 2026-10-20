@@ -5,7 +5,7 @@
  * para http://localhost:8080, então basta usar caminhos relativos.
  *
  * Toda requisição leva o token da sessão (Authorization: Bearer). Um 401
- * fora do login significa sessão inválida ou expirada: a sessão é
+ * fora do login/cadastro significa sessão inválida ou expirada: a sessão é
  * limpa e o AuthContext manda o usuário para /login.
  */
 import type { Sessao } from "../types";
@@ -35,8 +35,8 @@ export function definirAoNaoAutorizado(fn: () => void) {
   aoNaoAutorizado = fn;
 }
 
-/** O login é público: não leva token e o 401 é só mensagem de erro. */
-const ROTAS_PUBLICAS = ["/auth/login"];
+/** Login e cadastro são públicos: não levam token e o 401 é só mensagem de erro. */
+const ROTAS_PUBLICAS = ["/auth/login", "/auth/cadastro"];
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const publica = ROTAS_PUBLICAS.includes(path);
@@ -68,17 +68,19 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 }
 
 export const api = {
-  get:   <T>(path: string) => request<T>(path),
-  post:  <T>(path: string, body?: unknown) =>
-           request<T>(path, { method: "POST", body: JSON.stringify(body ?? {}) }),
+  get: <T>(path: string) => request<T>(path),
+  post: <T>(path: string, body?: unknown) =>
+    request<T>(path, { method: "POST", body: JSON.stringify(body ?? {}) }),
   patch: <T>(path: string, body?: unknown) =>
-           request<T>(path, { method: "PATCH", body: JSON.stringify(body ?? {}) }),
-  put:   <T>(path: string, body?: unknown) =>
-           request<T>(path, { method: "PUT", body: JSON.stringify(body ?? {}) }),
+    request<T>(path, { method: "PATCH", body: JSON.stringify(body ?? {}) }),
+  put: <T>(path: string, body?: unknown) =>
+    request<T>(path, { method: "PUT", body: JSON.stringify(body ?? {}) }),
 };
 
 /** Monta querystring ignorando campos vazios. */
-export function qs(params: Record<string, string | number | undefined | null>): string {
+export function qs(
+  params: Record<string, string | number | undefined | null>,
+): string {
   const p = new URLSearchParams();
   Object.entries(params).forEach(([k, v]) => {
     if (v !== undefined && v !== null && String(v).trim() !== "") {

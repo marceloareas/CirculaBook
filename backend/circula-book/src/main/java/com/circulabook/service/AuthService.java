@@ -1,6 +1,7 @@
 package com.circulabook.service;
 
 import com.circulabook.dto.AuthDTOs.AuthResponse;
+import com.circulabook.dto.AuthDTOs.CadastroRequest;
 import com.circulabook.dto.AuthDTOs.LoginRequest;
 import com.circulabook.dto.AuthDTOs.UsuarioSessao;
 import com.circulabook.model.Usuario;
@@ -15,10 +16,11 @@ import org.springframework.security.oauth2.jwt.JwtClaimsSet;
 import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.JwtEncoderParameters;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 
-/** Login e emissão do JWT (usuários já cadastrados na base). */
+/** Login, autocadastro (somente COMUM) e emissão do JWT. */
 @Service
 public class AuthService {
 
@@ -49,7 +51,38 @@ public class AuthService {
         if (u == null || req.senha() == null || !passwordEncoder.matches(req.senha(), u.getSenhaHash())) {
             throw new AuthException(HttpStatus.UNAUTHORIZED, CREDENCIAL_INVALIDA);
         }
+        if (!Boolean.TRUE.equals(u.getAtivo())) {
+            throw new AuthException(HttpStatus.FORBIDDEN, "Usuário inativo. Procure a administração da rede.");
+        }
         return emitir(u);
+    }
+
+    @Transactional
+    public AuthResponse cadastrar(CadastroRequest req) {
+        String nome = req.nome() == null ? "" : req.nome().trim();
+        String email = normalizar(req.email());
+        String senha = req.senha() == null ? "" : req.senha();
+
+        if (nome.isEmpty()) {
+            throw new AuthException(HttpStatus.BAD_REQUEST, "Informe o nome.");
+        }
+        if (!email.matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")) {
+            throw new AuthException(HttpStatus.BAD_REQUEST, "Informe um e-mail válido.");
+        }
+        if (senha.length() < 6) {
+            throw new AuthException(HttpStatus.BAD_REQUEST, "A senha deve ter pelo menos 6 caracteres.");
+        }
+        if (usuarioRepository.findByEmailIgnoreCase(email).isPresent()) {
+            throw new AuthException(HttpStatus.BAD_REQUEST, "Já existe uma conta com este e-mail.");
+        }
+
+        Usuario u = new Usuario();
+        u.setNome(nome);
+        u.setEmail(email);
+        u.setSenhaHash(passwordEncoder.encode(senha));
+        u.setTipo("COMUM"); // autocadastro nunca cria outro perfil
+        u.setAtivo(true);
+        return emitir(usuarioRepository.save(u));
     }
 
     public UsuarioSessao me(Long usuarioId) {

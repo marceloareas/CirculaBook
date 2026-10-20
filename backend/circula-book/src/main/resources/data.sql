@@ -20,17 +20,18 @@ INSERT INTO categoria (id, nome, descricao) VALUES
 (9, 'Tecnologia',           'Computação e desenvolvimento de software');
 
 -- ─── Bibliotecas ───
-INSERT INTO biblioteca (id, nome, endereco, email, telefone, criada_em) VALUES
-(1, 'Biblioteca Central',                    'Praça da Biblioteca, 50 - Centro',      'central@circulabook.com',     '(21) 3000-0001', CURRENT_TIMESTAMP - INTERVAL '500 days'),
-(2, 'Biblioteca Comunitária de Vila Isabel', 'Rua das Letras, 100 - Vila Isabel',     'vilaisabel@circulabook.com',  '(21) 3000-0002', CURRENT_TIMESTAMP - INTERVAL '500 days');
+INSERT INTO biblioteca (id, nome, endereco, email, telefone, ativa, criada_em) VALUES
+(1, 'Biblioteca Central',                    'Praça da Biblioteca, 50 - Centro',      'central@circulabook.com',     '(21) 3000-0001', TRUE, CURRENT_TIMESTAMP - INTERVAL '500 days'),
+(2, 'Biblioteca Comunitária de Vila Isabel', 'Rua das Letras, 100 - Vila Isabel',     'vilaisabel@circulabook.com',  '(21) 3000-0002', TRUE, CURRENT_TIMESTAMP - INTERVAL '500 days');
 
 -- ─── Usuários — senha de todos: senha123 (hash BCrypt real) ───
-INSERT INTO usuario (id, nome, email, senha_hash, tipo, biblioteca_id, criado_em, bloqueado_ate) VALUES
-(1, 'Bibliotecário Central',     'bibliotecariocentral@circulabook.com',    '$2a$10$65hIwrxXMxThdo9bISpK1uMNzOEm5D/8Ox2cHJRHMnBxgpi.vYExu', 'BIBLIOTECARIO', 1,    CURRENT_TIMESTAMP - INTERVAL '500 days', NULL),
-(2, 'Bibliotecário Vila Isabel', 'bibliotecariovilaisabel@circulabook.com', '$2a$10$65hIwrxXMxThdo9bISpK1uMNzOEm5D/8Ox2cHJRHMnBxgpi.vYExu', 'BIBLIOTECARIO', 2,    CURRENT_TIMESTAMP - INTERVAL '500 days', NULL),
-(3, 'Usuário 1',                 'usuario1@circulabook.com',                '$2a$10$65hIwrxXMxThdo9bISpK1uMNzOEm5D/8Ox2cHJRHMnBxgpi.vYExu', 'COMUM',         NULL, CURRENT_TIMESTAMP - INTERVAL '2 days',   NULL),
-(4, 'Usuário 2',                 'usuario2@circulabook.com',                '$2a$10$65hIwrxXMxThdo9bISpK1uMNzOEm5D/8Ox2cHJRHMnBxgpi.vYExu', 'COMUM',         NULL, CURRENT_TIMESTAMP - INTERVAL '120 days', NULL),
-(5, 'Usuário 3',                 'usuario3@circulabook.com',                '$2a$10$65hIwrxXMxThdo9bISpK1uMNzOEm5D/8Ox2cHJRHMnBxgpi.vYExu', 'COMUM',         NULL, CURRENT_TIMESTAMP - INTERVAL '120 days', NULL);
+INSERT INTO usuario (id, nome, email, senha_hash, tipo, biblioteca_id, ativo, criado_em, bloqueado_ate) VALUES
+(1, 'Bibliotecário Central',     'bibliotecariocentral@circulabook.com',    '$2a$10$65hIwrxXMxThdo9bISpK1uMNzOEm5D/8Ox2cHJRHMnBxgpi.vYExu', 'BIBLIOTECARIO', 1,    TRUE, CURRENT_TIMESTAMP - INTERVAL '500 days', NULL),
+(2, 'Bibliotecário Vila Isabel', 'bibliotecariovilaisabel@circulabook.com', '$2a$10$65hIwrxXMxThdo9bISpK1uMNzOEm5D/8Ox2cHJRHMnBxgpi.vYExu', 'BIBLIOTECARIO', 2,    TRUE, CURRENT_TIMESTAMP - INTERVAL '500 days', NULL),
+(3, 'Usuário 1',                 'usuario1@circulabook.com',                '$2a$10$65hIwrxXMxThdo9bISpK1uMNzOEm5D/8Ox2cHJRHMnBxgpi.vYExu', 'COMUM',         NULL, TRUE, CURRENT_TIMESTAMP - INTERVAL '2 days',   NULL),
+(4, 'Usuário 2',                 'usuario2@circulabook.com',                '$2a$10$65hIwrxXMxThdo9bISpK1uMNzOEm5D/8Ox2cHJRHMnBxgpi.vYExu', 'COMUM',         NULL, TRUE, CURRENT_TIMESTAMP - INTERVAL '120 days', NULL),
+(5, 'Usuário 3',                 'usuario3@circulabook.com',                '$2a$10$65hIwrxXMxThdo9bISpK1uMNzOEm5D/8Ox2cHJRHMnBxgpi.vYExu', 'COMUM',         NULL, TRUE, CURRENT_TIMESTAMP - INTERVAL '120 days', NULL),
+(6, 'Admin',                     'admin@circulabook.com',                   '$2a$10$65hIwrxXMxThdo9bISpK1uMNzOEm5D/8Ox2cHJRHMnBxgpi.vYExu', 'ADMIN',         NULL, TRUE, CURRENT_TIMESTAMP - INTERVAL '500 days', NULL);
 
 -- ─── Livros — ISBNs fictícios ───
 INSERT INTO livro (id, titulo, autor, isbn, editora, ano_publicacao, sinopse, categoria_id) VALUES

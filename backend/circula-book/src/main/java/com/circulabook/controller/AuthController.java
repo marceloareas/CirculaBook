@@ -1,5 +1,6 @@
 package com.circulabook.controller;
 
+import com.circulabook.dto.AuthDTOs.CadastroRequest;
 import com.circulabook.dto.AuthDTOs.LoginRequest;
 import com.circulabook.service.AuthService;
 import com.circulabook.service.AuthService.AuthException;
@@ -20,6 +21,12 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest req) {
         return responder(() -> authService.login(req));
+    }
+
+    /** Autocadastro público: sempre cria um usuário COMUM e já devolve a sessão. */
+    @PostMapping("/cadastro")
+    public ResponseEntity<?> cadastro(@RequestBody CadastroRequest req) {
+        return responder(() -> authService.cadastrar(req));
     }
 
     @GetMapping("/me")

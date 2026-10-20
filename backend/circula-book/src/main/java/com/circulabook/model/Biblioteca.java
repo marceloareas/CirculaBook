@@ -29,11 +29,15 @@ public class Biblioteca {
     @Column(length = 20)
     private String telefone;
 
+    @Column(nullable = false)
+    private Boolean ativa = true;
+
     @Column
     private LocalDateTime criadaEm;
 
     @PrePersist
     public void preencheCriadaEm() {
         if (this.criadaEm == null) this.criadaEm = LocalDateTime.now();
+        if (this.ativa == null) this.ativa = true;
     }
 }

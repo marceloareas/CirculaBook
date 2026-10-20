@@ -12,4 +12,8 @@ public record Ator(Long id, String perfil, Long bibliotecaId) {
             jwt.getClaimAsString("perfil"),
             bib instanceof Number n ? n.longValue() : null);
     }
+
+    public boolean ehComum()         { return "COMUM".equals(perfil); }
+    public boolean ehBibliotecario() { return "BIBLIOTECARIO".equals(perfil); }
+    public boolean ehAdmin()         { return "ADMIN".equals(perfil); }
 }
