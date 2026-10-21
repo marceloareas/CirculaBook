@@ -32,6 +32,10 @@ public class LivroService {
     @Autowired
     private ReservaRepository reservaRepository;
 
+    public List<Livro> obterTodos() {
+        return livroRepository.findAll();
+    }
+
     /** Busca na rede com filtros opcionais (Tela 1 -> Tela 2). */
     public List<LivroResumoDTO> buscar(String termo, String autor, String isbn,
                                        Long categoriaId, Integer anoDe, Integer anoAte) {
