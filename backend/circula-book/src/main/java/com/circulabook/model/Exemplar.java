@@ -34,6 +34,10 @@ public class Exemplar {
     @Column(nullable = false, length = 30)
     private String status;
 
+    // NOVO | BOM | USADO
+    @Column(length = 30)
+    private String estadoConservacao;
+
     @Column
     private LocalDateTime adicionadoEm;
 
