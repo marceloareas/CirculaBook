@@ -36,8 +36,13 @@ public final class StatusExemplar {
             RESERVADO)              // expiração/cancelamento com fila: passa ao próximo
     );
 
+    /** T15: estados possíveis na criação do exemplar. */
+    private static final Set<String> INICIAIS = Set.of(DISPONIVEL, RESERVADO);
+
+    /** {@code de == null} significa criação do exemplar (T15). */
     public static boolean transicaoValida(String de, String para) {
-        if (de == null || para == null) return false;
+        if (para == null) return false;
+        if (de == null) return INICIAIS.contains(para);
         return TRANSICOES.getOrDefault(de, Set.of()).contains(para);
     }
 
