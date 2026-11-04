@@ -14,15 +14,17 @@ public final class StatusExemplar {
     public static final String EMPRESTADO = "EMPRESTADO";
     /** Emprestado e há fila PENDENTE do título nesta biblioteca. */
     public static final String EMPRESTADO_RESERVADO = "EMPRESTADO_RESERVADO";
-    /** Separado para o 1º da fila, aguardando retirada. */
+    /** Separado para o 1º da fila, aguardando retirada (ou transferência). */
     public static final String RESERVADO = "RESERVADO";
+    public static final String EM_TRANSFERENCIA = "EM_TRANSFERENCIA";
 
     private StatusExemplar() {}
 
     /** Origem -> destinos permitidos. */
     private static final Map<String, Set<String>> TRANSICOES = Map.of(
         DISPONIVEL, Set.of(
-            EMPRESTADO),            // empréstimo
+            EMPRESTADO,             // empréstimo
+            EM_TRANSFERENCIA),      // transferência avulsa
         EMPRESTADO, Set.of(
             DISPONIVEL,             // devolução, fila vazia
             EMPRESTADO_RESERVADO),  // alguém entrou na fila
@@ -33,7 +35,11 @@ public final class StatusExemplar {
             EMPRESTADO_RESERVADO,   // retirada e ainda há fila
             EMPRESTADO,             // retirada e não há mais fila
             DISPONIVEL,             // expiração/cancelamento com fila vazia
-            RESERVADO)              // expiração/cancelamento com fila: passa ao próximo
+            RESERVADO,              // expiração/cancelamento com fila: passa ao próximo
+            EM_TRANSFERENCIA),      // transferência de reserva aprovada
+        EM_TRANSFERENCIA, Set.of(
+            RESERVADO,              // chegada com reserva esperando
+            DISPONIVEL)             // chegada sem reserva esperando
     );
 
     /** T15: estados possíveis na criação do exemplar. */
@@ -58,6 +64,7 @@ public final class StatusExemplar {
             case EMPRESTADO -> "Emprestado";
             case EMPRESTADO_RESERVADO -> "Emprestado (com fila)";
             case RESERVADO -> "Reservado";
+            case EM_TRANSFERENCIA -> "Em transferência";
             default -> status;
         };
     }

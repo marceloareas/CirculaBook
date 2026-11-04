@@ -17,9 +17,13 @@ import java.util.List;
  * Especialista de Fila — Knowledge Source da arquitetura Blackboard.
  *
  * O "quadro" é o estado dos exemplares no banco. Sempre que um exemplar fica
- * livre em uma biblioteca (devolução ou expiração de reserva), este especialista
- * olha a fila daquela biblioteca: sem fila, o exemplar fica DISPONIVEL; com fila,
- * vai direto a RESERVADO e a reserva do primeiro fica pronta para retirada (3 dias).
+ * livre em uma biblioteca (devolução, chegada de transferência, expiração ou
+ * cancelamento de reserva, cadastro), este especialista olha a fila daquela
+ * biblioteca: sem fila, o exemplar fica DISPONIVEL; com fila, vai direto a
+ * RESERVADO e atende o primeiro, decidindo entre:
+ *   - retirada na própria biblioteca  -> reserva DISPONIVEL (3 dias);
+ *   - retirada em outra biblioteca    -> vincula o exemplar ao pedido de
+ *                                        transferência e, se já aprovado, despacha.
  *
  * É chamado de forma síncrona, na mesma transação de quem liberou o exemplar.
  * As mudanças de status passam pela máquina de estados (EstadoExemplarService).
@@ -32,7 +36,9 @@ public class FilaEsperaService {
     public static final int DIAS_PARA_RETIRADA = 3; // RN03
 
     @Autowired private ReservaRepository reservaRepository;
+    @Autowired private SolicitacaoTransferenciaRepository transferenciaRepository;
     @Autowired private EstadoExemplarService estadoExemplar;
+    @Autowired private RegrasTransferenciaService regras;
 
     /**
      * Chamar sempre que um exemplar ficar livre na biblioteca em que está.
@@ -48,13 +54,61 @@ public class FilaEsperaService {
             estadoExemplar.mudarStatus(exemplar, DISPONIVEL);
         } else {
             estadoExemplar.mudarStatus(exemplar, RESERVADO);
-            liberarParaRetirada(fila.get(0), exemplar);
+            atender(fila.get(0), exemplar);
         }
         estadoExemplar.sincronizarMarcaDeFila(exemplar.getLivro(), exemplar.getBiblioteca());
     }
 
+    /** O exemplar (já RESERVADO) fica separado para esta reserva, a 1ª da fila. */
+    private void atender(Reserva reserva, Exemplar exemplar) {
+        reserva.setExemplar(exemplar);
+
+        SolicitacaoTransferencia pedido = transferenciaRepository
+            .findFirstByReservaAndStatusIn(reserva, List.of("PENDENTE", "APROVADA"))
+            .orElse(null);
+
+        // Sem transferência (ou pedido rejeitado/cancelado): retirada na própria biblioteca
+        if (pedido == null) {
+            liberarParaRetirada(reserva, exemplar);
+            return;
+        }
+
+        // Com transferência: vincula o exemplar ao pedido
+        pedido.setExemplar(exemplar);
+
+        // RN15 no despacho: antes de sair, a origem precisa continuar com o livro; se a regra
+        // deixou de valer, o pedido é cancelado e a reserva é atendida na própria origem (3 dias).
+        if ("APROVADA".equals(pedido.getStatus())) {
+            String motivo = regras.motivoBloqueioOrigem(reserva.getLivro(), pedido.getBibliotecaOrigem(), pedido);
+            if (motivo != null) {
+                pedido.setStatus("CANCELADA");
+                pedido.setDataConclusao(LocalDateTime.now());
+                pedido.setObservacoes("Cancelada no despacho: " + motivo + " A reserva segue com retirada na "
+                    + pedido.getBibliotecaOrigem().getNome() + ".");
+                transferenciaRepository.save(pedido);
+                reserva.setBibliotecaDestino(reserva.getBibliotecaFila());
+                liberarParaRetirada(reserva, exemplar);
+                log.info("[FILA] Transferência #" + pedido.getId() + " cancelada no despacho (RN15).");
+                return;
+            }
+        }
+
+        reserva.setStatus("AGUARDANDO_TRANSFERENCIA");
+        reservaRepository.save(reserva);
+
+        if ("APROVADA".equals(pedido.getStatus())) {
+            despachar(pedido, null);              // já aprovada: segue viagem agora (T4 + T9 na mesma transação)
+        } else {
+            transferenciaRepository.save(pedido); // PENDENTE: espera o Admin decidir
+            log.info("[FILA] Exemplar nº " + exemplar.getId()
+                + " separado para " + reserva.getUsuario().getNome()
+                + ", aguardando aprovação da transferência #" + pedido.getId() + ".");
+        }
+    }
+
     /** Reserva fica DISPONIVEL e o usuário ganha 3 dias para retirar. */
-    private void liberarParaRetirada(Reserva reserva, Exemplar exemplar) {
+    @Transactional
+    public void liberarParaRetirada(Reserva reserva, Exemplar exemplar) {
         reserva.setExemplar(exemplar);
         reserva.setStatus("DISPONIVEL");
         reserva.setDataExpiracao(LocalDateTime.now().plusDays(DIAS_PARA_RETIRADA));
@@ -62,13 +116,29 @@ public class FilaEsperaService {
 
         log.info("[FILA] Exemplar nº " + exemplar.getId() + " de " + exemplar.getLivro().getTitulo()
             + " separado para " + reserva.getUsuario().getNome()
-            + ": retirada na " + reserva.getBibliotecaFila().getNome()
+            + ": retirada na " + reserva.getBibliotecaDestino().getNome()
             + " em até " + DIAS_PARA_RETIRADA + " dias.");
     }
 
+    /** Pedido aprovado + exemplar vinculado => EM_TRANSITO e exemplar EM_TRANSFERENCIA. */
+    @Transactional
+    public void despachar(SolicitacaoTransferencia pedido, Usuario aprovador) {
+        Exemplar exemplar = pedido.getExemplar();
+
+        if (aprovador != null) pedido.setAprovador(aprovador);
+        pedido.setStatus("EM_TRANSITO");
+        transferenciaRepository.save(pedido);
+
+        estadoExemplar.mudarStatus(exemplar, EM_TRANSFERENCIA); // T8 (avulsa) ou T9 (reserva)
+
+        log.info("[FILA] Transferência #" + pedido.getId() + " em trânsito: "
+            + pedido.getBibliotecaOrigem().getNome() + " -> " + pedido.getBibliotecaDestino().getNome());
+    }
+
     /**
-     * Retirada vencida: a reserva expira e o exemplar volta para a fila
-     * (atende o próximo) ou fica DISPONIVEL. Roda a cada minuto.
+     * Retirada vencida: a reserva expira e o exemplar FICA onde está
+     * (se já chegou na biblioteca de retirada, passa a fazer parte do acervo dela)
+     * e atende o próximo da fila ou fica DISPONIVEL. Roda a cada minuto.
      */
     @Scheduled(fixedDelay = 60_000)
     @Transactional

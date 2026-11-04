@@ -161,15 +161,15 @@ INSERT INTO emprestimo (id, exemplar_id, usuario_id, biblioteca_id, data_emprest
 (7, 45, 5, 1, CURRENT_TIMESTAMP - INTERVAL '41 days', CURRENT_TIMESTAMP - INTERVAL '27 days', CURRENT_TIMESTAMP - INTERVAL '28 days', 'DEVOLVIDO'),
 (8, 29, 5, 1, CURRENT_TIMESTAMP - INTERVAL '30 days', CURRENT_TIMESTAMP - INTERVAL '16 days', CURRENT_TIMESTAMP - INTERVAL '18 days', 'DEVOLVIDO');
 
--- ─── Reservas — fila e retirada sempre na mesma biblioteca ───
+-- ─── Reservas — no seed, fila e retirada na mesma biblioteca (sem transferência) ───
 -- 1: U3, O Hobbit, na fila da Central (exemplar 19 está com U2).
 -- 2: U3, Harry Potter, pronta para retirada na Vila Isabel (exemplar 22), expira em 2 dias.
 -- 3 e 4: encerradas (U3 retirou Código Limpo; U3 deixou 1984 expirar).
-INSERT INTO reserva (id, livro_id, usuario_id, biblioteca_fila_id, exemplar_id, data_reserva, data_expiracao, status) VALUES
-(1, 9,  5, 1, NULL, CURRENT_TIMESTAMP - INTERVAL '1 days',  CURRENT_TIMESTAMP + INTERVAL '2 days',  'PENDENTE'),
-(2, 10, 5, 2, 22,   CURRENT_TIMESTAMP - INTERVAL '6 days',  CURRENT_TIMESTAMP + INTERVAL '2 days',  'DISPONIVEL'),
-(3, 20, 5, 1, 45,   CURRENT_TIMESTAMP - INTERVAL '45 days', CURRENT_TIMESTAMP - INTERVAL '40 days', 'RETIRADA'),
-(4, 6,  5, 1, 12,   CURRENT_TIMESTAMP - INTERVAL '28 days', CURRENT_TIMESTAMP - INTERVAL '22 days', 'EXPIRADA');
+INSERT INTO reserva (id, livro_id, usuario_id, biblioteca_fila_id, biblioteca_destino_id, exemplar_id, data_reserva, data_expiracao, status) VALUES
+(1, 9,  5, 1, 1, NULL, CURRENT_TIMESTAMP - INTERVAL '1 days',  CURRENT_TIMESTAMP + INTERVAL '2 days',  'PENDENTE'),
+(2, 10, 5, 2, 2, 22,   CURRENT_TIMESTAMP - INTERVAL '6 days',  CURRENT_TIMESTAMP + INTERVAL '2 days',  'DISPONIVEL'),
+(3, 20, 5, 1, 1, 45,   CURRENT_TIMESTAMP - INTERVAL '45 days', CURRENT_TIMESTAMP - INTERVAL '40 days', 'RETIRADA'),
+(4, 6,  5, 1, 1, 12,   CURRENT_TIMESTAMP - INTERVAL '28 days', CURRENT_TIMESTAMP - INTERVAL '22 days', 'EXPIRADA');
 
 -- ============================================================================
 -- Sincroniza as sequences: com IDs explícitos acima, sem isto o próximo INSERT
