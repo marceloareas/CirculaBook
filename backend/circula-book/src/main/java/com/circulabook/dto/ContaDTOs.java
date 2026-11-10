@@ -18,4 +18,7 @@ public final class ContaDTOs {
     public record MeusEmprestimos(
         List<MeuEmprestimo> emprestimos, int total, int limite,
         boolean bloqueado, LocalDateTime bloqueadoAte) {}
+
+    /** Página de uma listagem paginada no servidor (pagina começa em 0). */
+    public record Pagina<T>(List<T> itens, int pagina, int tamanho, long totalItens, int totalPaginas) {}
 }

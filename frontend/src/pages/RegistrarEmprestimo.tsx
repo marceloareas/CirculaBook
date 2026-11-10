@@ -346,7 +346,7 @@ export default function RegistrarEmprestimo() {
         direita={
           <>
             {situacao?.apto && (
-              <Callout tipo="sucesso" titulo="Nenhuma pendência encontrada">
+              <Callout tipo="info" titulo="Nenhuma pendência encontrada">
                 O usuário está apto a realizar este empréstimo.
               </Callout>
             )}
@@ -365,7 +365,7 @@ export default function RegistrarEmprestimo() {
             </Callout>
 
             <Callout
-              tipo="aviso"
+              tipo="info"
               titulo="Atraso bloqueia novos empréstimos"
             >
               Cada dia de atraso soma 2 dias de bloqueio para novos empréstimos.

@@ -74,7 +74,7 @@ public class SecurityConfig {
                 // Busca, detalhes, reserva e minhas reservas: usuário comum
                 .requestMatchers(HttpMethod.GET, "/api/livros/busca", "/api/livros/*").hasRole(COMUM)
                 .requestMatchers(HttpMethod.GET, "/api/reservas/posicao/*",
-                                 "/api/reservas/minhas").hasRole(COMUM)
+                                 "/api/reservas/minhas", "/api/reservas/destinos").hasRole(COMUM)
                 .requestMatchers(HttpMethod.POST, "/api/reservas").hasRole(COMUM)
                 .requestMatchers(HttpMethod.PATCH, "/api/reservas/*/cancelar").hasRole(COMUM)
 
@@ -87,6 +87,18 @@ public class SecurityConfig {
                                  "/api/emprestimos/situacao/*").hasRole(BIBLIOTECARIO)
                 .requestMatchers(HttpMethod.POST, "/api/emprestimos/registrar",
                                  "/api/emprestimos/devolver").hasRole(BIBLIOTECARIO)
+
+                // Transferências: decisão, avulsa e acompanhamento do Admin (RN04/RN14);
+                // chegada só pelo bibliotecário do destino (RN16, recorte no controller)
+                .requestMatchers(HttpMethod.GET, "/api/transferencias/biblioteca/a-receber",
+                                 "/api/transferencias/biblioteca/saindo").hasRole(BIBLIOTECARIO)
+                .requestMatchers(HttpMethod.PATCH, "/api/transferencias/*/confirmar-chegada").hasRole(BIBLIOTECARIO)
+                .requestMatchers(HttpMethod.GET, "/api/transferencias/pedidos-pendentes",
+                                 "/api/transferencias/acompanhamento", "/api/transferencias/destinos-avulsa",
+                                 "/api/transferencias/resumo", "/api/exemplares").hasRole(ADMIN)
+                .requestMatchers(HttpMethod.POST, "/api/transferencias/avulsa").hasRole(ADMIN)
+                .requestMatchers(HttpMethod.PATCH, "/api/transferencias/*/aprovar",
+                                 "/api/transferencias/*/rejeitar").hasRole(ADMIN)
 
                 // Qualquer outra rota não existe nesta versão
                 .anyRequest().denyAll())

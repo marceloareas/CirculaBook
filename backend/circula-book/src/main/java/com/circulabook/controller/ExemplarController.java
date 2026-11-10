@@ -2,6 +2,7 @@ package com.circulabook.controller;
 
 import com.circulabook.config.Ator;
 import com.circulabook.dto.CadastroExemplarDTO;
+import com.circulabook.model.Exemplar;
 import com.circulabook.repository.BibliotecaRepository;
 import com.circulabook.repository.ExemplarRepository;
 import com.circulabook.service.ExemplarService;
@@ -11,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
+import java.util.List;
 import java.util.Objects;
 
 @RestController
@@ -25,6 +27,12 @@ public class ExemplarController {
 
     @Autowired
     private ExemplarService exemplarService;
+
+    /** Transferência avulsa do Admin — exemplares de toda a rede. */
+    @GetMapping
+    public List<Exemplar> obterTodos() {
+        return exemplarRepository.findAll();
+    }
 
     /** Tela de Empréstimo — acervo da biblioteca do bibliotecário logado. */
     @GetMapping("/biblioteca/{bibliotecaId}")
