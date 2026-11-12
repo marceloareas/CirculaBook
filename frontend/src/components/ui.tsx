@@ -83,6 +83,35 @@ export function BadgeSituacao({ situacao }: { situacao: string }) {
   return <Badge tom="vermelho">🔴 Indisponível: sem exemplares</Badge>;
 }
 
+/** Etapa legível de uma transferência (os DTOs já trazem "APROVADA_AGUARDANDO_EXEMPLAR"). */
+export function BadgeEtapaTransferencia({ etapa }: { etapa: string }) {
+  const mapa: Record<string, { tom: Tom; texto: string }> = {
+    PENDENTE: { tom: "amarelo", texto: "Aguardando decisão" },
+    APROVADA: { tom: "azul", texto: "Aprovada" },
+    APROVADA_AGUARDANDO_EXEMPLAR: { tom: "azul", texto: "Aprovada, aguardando exemplar" },
+    EM_TRANSITO: { tom: "azul", texto: "Em trânsito" },
+    CONCLUIDA: { tom: "verde", texto: "Concluída" },
+    REJEITADA: { tom: "vermelho", texto: "Rejeitada" },
+    CANCELADA: { tom: "cinza", texto: "Cancelada" },
+  };
+  const m = mapa[etapa] ?? { tom: "cinza" as Tom, texto: etapa };
+  return <Badge tom={m.tom}>{m.texto}</Badge>;
+}
+
+/** Traduz o status de uma reserva. */
+export function BadgeReserva({ status }: { status: string }) {
+  const mapa: Record<string, { tom: Tom; texto: string }> = {
+    PENDENTE: { tom: "amarelo", texto: "NA FILA" },
+    AGUARDANDO_TRANSFERENCIA: { tom: "azul", texto: "AGUARDANDO TRANSFERÊNCIA" },
+    DISPONIVEL: { tom: "verde", texto: "PRONTA PARA RETIRADA" },
+    RETIRADA: { tom: "cinza", texto: "RETIRADA" },
+    CANCELADA: { tom: "cinza", texto: "CANCELADA" },
+    EXPIRADA: { tom: "vermelho", texto: "EXPIRADA" },
+  };
+  const m = mapa[status] ?? { tom: "cinza" as Tom, texto: status };
+  return <Badge tom={m.tom}>{m.texto}</Badge>;
+}
+
 /* ─────────────── Caixas de alerta da coluna lateral ─────────────── */
 export function Callout({
   tipo,

@@ -1,16 +1,19 @@
 /**
  * Minhas Reservas — acompanhamento da fila de espera do usuário (UC05 / UC07).
  *
- * Mostra, para cada reserva ativa (GET /api/reservas/minhas, sempre do usuário logado),
- * a biblioteca (fila e retirada), a posição na fila ou a data limite de retirada,
- * e permite cancelar a reserva.
+ * Mostra, para cada reserva ativa (GET /api/reservas/minhas, sempre do usuário logado):
+ *  - a posição na fila DA biblioteca (reserva é por biblioteca);
+ *  - onde o usuário entrou na fila e onde vai retirar;
+ *  - a etapa do pedido de transferência, quando a retirada é em outra biblioteca;
+ *  - a data limite de retirada, quando o exemplar já está liberado.
  */
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, formatarData } from "../api/client";
-import type { MinhaReserva } from "../types";
+import type { MinhaReserva, TransferenciaDaReserva } from "../types";
 import {
   Badge,
+  BadgeReserva,
   Botao,
   CapaLivro,
   Callout,
@@ -22,9 +25,47 @@ import {
   SectionCard,
   Sucesso,
   TituloPagina,
+  Trilha,
   Vazio,
 } from "../components/ui";
 import ModalConfirmacao, { ResumoModal } from "../components/ModalConfirmacao";
+
+/** Rótulo curto da etapa da transferência. */
+const ETAPA: Record<
+  TransferenciaDaReserva["etapa"],
+  { texto: string; tom: "amarelo" | "azul" | "verde" | "vermelho" | "cinza" }
+> = {
+  PENDENTE: { texto: "Transferência pendente", tom: "amarelo" },
+  PENDENTE_COM_EXEMPLAR: { texto: "Exemplar separado, aguardando aprovação", tom: "amarelo" },
+  APROVADA_AGUARDANDO_EXEMPLAR: { texto: "Aprovada, aguardando exemplar", tom: "azul" },
+  EM_TRANSITO: { texto: "Em trânsito", tom: "azul" },
+  CONCLUIDA: { texto: "Transferência concluída", tom: "verde" },
+  REJEITADA: { texto: "Transferência rejeitada", tom: "vermelho" },
+  CANCELADA: { texto: "Transferência cancelada", tom: "cinza" },
+};
+
+/** Mensagem principal do card, conforme o momento da reserva. */
+function mensagemDe(r: MinhaReserva): { texto: string; tom: "neutro" | "azul" } {
+  if (r.status === "DISPONIVEL") {
+    return {
+      tom: "azul",
+      texto: `Seu exemplar está pronto! Retire na ${r.bibliotecaRetirada} até ${formatarData(r.retireAte)}.`,
+    };
+  }
+  if (r.status === "AGUARDANDO_TRANSFERENCIA") {
+    return {
+      tom: "azul",
+      texto:
+        r.transferencia?.descricao ??
+        `Um exemplar foi separado para você na ${r.bibliotecaFila}.`,
+    };
+  }
+  const fila = `Você é o ${r.posicao ?? 1}º da fila na ${r.bibliotecaFila}.`;
+  if (!r.transferencia) {
+    return { tom: "neutro", texto: `${fila} O exemplar fica separado para você quando for a sua vez.` };
+  }
+  return { tom: "neutro", texto: `${fila} ${r.transferencia.descricao}` };
+}
 
 export default function MinhasReservas() {
   const [reservas, setReservas] = useState<MinhaReserva[] | null>(null);
@@ -63,9 +104,11 @@ export default function MinhasReservas() {
     return <Carregando texto="Carregando suas reservas..." />;
   }
   const ativas = reservas ?? [];
+  const emTransito = alvo?.transferencia?.etapa === "EM_TRANSITO";
 
   return (
     <>
+      <Trilha itens={[{ rotulo: "Minhas Reservas" }]} />
       <TituloPagina
         titulo="Minhas Reservas"
         subtitulo="Acompanhe sua posição nas filas de espera e a retirada dos livros reservados"
@@ -83,15 +126,22 @@ export default function MinhasReservas() {
 
             <div className="flex flex-col gap-3">
               {ativas.map((r) => {
-                const pronta = r.status === "DISPONIVEL";
+                const msg = mensagemDe(r);
+                const caixa = {
+                  neutro: "bg-white border-[#e0e0e0] text-[#2c3e50]",
+                  azul: "bg-[#deedfc] border-[#1976d2] text-[#125ca8]",
+                }[msg.tom];
+                const etapa = r.transferencia ? ETAPA[r.transferencia.etapa] : null;
+
                 return (
                   <div
                     key={r.id}
+                    data-testid="reserva"
                     className="flex flex-wrap items-start gap-4 rounded-[10px] bg-[#f5f7fa] p-4"
                   >
                     <CapaLivro tamanho="sm" />
 
-                    <div className="flex-1 min-w-[240px] flex flex-col gap-2">
+                    <div className="flex-1 min-w-[260px] flex flex-col gap-2">
                       <div className="flex flex-wrap items-center gap-3">
                         <Link
                           to={`/livro/${r.livroId}`}
@@ -99,25 +149,27 @@ export default function MinhasReservas() {
                         >
                           {r.titulo}
                         </Link>
-                        {pronta ? (
-                          <Badge tom="verde">PRONTA PARA RETIRADA</Badge>
-                        ) : (
-                          <Badge tom="amarelo">NA FILA</Badge>
-                        )}
+                        <BadgeReserva status={r.status} />
                         {r.posicao && <Badge tom="cinza">{r.posicao}º na fila</Badge>}
                       </div>
                       <p className="text-[13px] text-[#66707d]">{r.autor}</p>
-                      <p className="text-[13px] text-[#125ca8]">📍 {r.biblioteca}</p>
+                      <p className="text-[13px] text-[#125ca8]">
+                        📍 Fila na {r.bibliotecaFila} → retirada na {r.bibliotecaRetirada}
+                      </p>
+                      {etapa && (
+                        <div>
+                          <Badge tom={etapa.tom}>🚚 {etapa.texto}</Badge>
+                        </div>
+                      )}
+                      {r.retireAte && (
+                        <p className="text-[13px] font-semibold text-[#125ca8]">
+                          Retire até {formatarData(r.retireAte)}
+                        </p>
+                      )}
                       <p
-                        className={`rounded-[8px] border px-3 py-2 text-[13px] leading-[1.45] ${
-                          pronta
-                            ? "bg-[#dbf0db] border-[#388e3c] text-[#2b6e2e]"
-                            : "bg-white border-[#e0e0e0] text-[#2c3e50]"
-                        }`}
+                        className={`rounded-[8px] border px-3 py-2 text-[13px] leading-[1.45] ${caixa}`}
                       >
-                        {pronta
-                          ? `Seu exemplar está pronto! Retire na ${r.biblioteca} até ${formatarData(r.retireAte)}.`
-                          : `Você é o ${r.posicao ?? 1}º da fila na ${r.biblioteca}. O exemplar fica separado para você quando for a sua vez.`}
+                        {msg.texto}
                       </p>
                       <p className="text-[12px] text-[#9aa3ad]">
                         Reservado em {formatarData(r.dataReserva)}
@@ -139,9 +191,14 @@ export default function MinhasReservas() {
           <>
             <Callout tipo="info" titulo="Como funciona a fila">
               A fila é de cada biblioteca. Quando um exemplar é devolvido nela,
-              ele fica separado para o 1º da fila, que tem 3 dias para retirá-lo
-              na mesma biblioteca. Passado o prazo, a reserva expira e o próximo
-              é atendido.
+              ele fica separado para o 1º da fila, que tem 3 dias para retirar.
+              Passado o prazo, a reserva expira e o próximo é atendido.
+            </Callout>
+
+            <Callout tipo="info" titulo="Retirada em outra biblioteca">
+              Se você escolheu retirar em outra unidade, o administrador precisa
+              aprovar o pedido. Se ele recusar, sua reserva continua na fila e a
+              retirada passa a ser na biblioteca onde você a fez.
             </Callout>
 
             <CardResumo
@@ -156,6 +213,11 @@ export default function MinhasReservas() {
                 rotulo="Na fila"
                 valor={ativas.filter((r) => r.status === "PENDENTE").length}
                 destaque="laranja"
+              />
+              <LinhaResumo
+                rotulo="Aguardando transferência"
+                valor={ativas.filter((r) => r.status === "AGUARDANDO_TRANSFERENCIA").length}
+                destaque="azul"
               />
               <LinhaResumo
                 rotulo="Prontas para retirada"
@@ -182,7 +244,8 @@ export default function MinhasReservas() {
             <ResumoModal
               linhas={[
                 ["Livro", alvo.titulo],
-                ["Biblioteca", alvo.biblioteca],
+                ["Fila", alvo.bibliotecaFila],
+                ["Retirada", alvo.bibliotecaRetirada],
               ]}
             />
             <p>
@@ -190,6 +253,13 @@ export default function MinhasReservas() {
               {alvo.status === "DISPONIVEL" &&
                 " O exemplar separado será liberado para o próximo da fila."}
             </p>
+            {emTransito && (
+              <p className="rounded-[8px] bg-[#deedfc] text-[#125ca8] px-3 py-2 text-[13px]">
+                ℹ️ O exemplar já está a caminho da {alvo.bibliotecaRetirada}. A
+                viagem continua mesmo com o cancelamento: ele chegará ao destino
+                e ficará disponível lá para qualquer leitor.
+              </p>
+            )}
           </>
         )}
       </ModalConfirmacao>

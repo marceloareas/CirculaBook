@@ -8,7 +8,7 @@
  * fora do login/cadastro significa sessão inválida ou expirada: a sessão é
  * limpa e o AuthContext manda o usuário para /login.
  */
-import type { Sessao } from "../types";
+import type { Pagina, Sessao } from "../types";
 
 const BASE = "/api";
 const CHAVE_SESSAO = "circulabook.sessao";
@@ -68,19 +68,17 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 }
 
 export const api = {
-  get: <T>(path: string) => request<T>(path),
-  post: <T>(path: string, body?: unknown) =>
-    request<T>(path, { method: "POST", body: JSON.stringify(body ?? {}) }),
+  get:   <T>(path: string) => request<T>(path),
+  post:  <T>(path: string, body?: unknown) =>
+           request<T>(path, { method: "POST", body: JSON.stringify(body ?? {}) }),
   patch: <T>(path: string, body?: unknown) =>
-    request<T>(path, { method: "PATCH", body: JSON.stringify(body ?? {}) }),
-  put: <T>(path: string, body?: unknown) =>
-    request<T>(path, { method: "PUT", body: JSON.stringify(body ?? {}) }),
+           request<T>(path, { method: "PATCH", body: JSON.stringify(body ?? {}) }),
+  put:   <T>(path: string, body?: unknown) =>
+           request<T>(path, { method: "PUT", body: JSON.stringify(body ?? {}) }),
 };
 
 /** Monta querystring ignorando campos vazios. */
-export function qs(
-  params: Record<string, string | number | undefined | null>,
-): string {
+export function qs(params: Record<string, string | number | undefined | null>): string {
   const p = new URLSearchParams();
   Object.entries(params).forEach(([k, v]) => {
     if (v !== undefined && v !== null && String(v).trim() !== "") {
@@ -94,6 +92,15 @@ export function qs(
 /** O exemplar é identificado pelo número sequencial (id). */
 export function nomeExemplar(id: number): string {
   return `Exemplar nº ${id}`;
+}
+
+/** Frase sobre para onde o exemplar foi após a devolução (fila/transferência). */
+export function destinoAposDevolucao(statusExemplar?: string): string {
+  if (statusExemplar === "EM_TRANSFERENCIA") {
+    return "O exemplar seguiu direto para transferência: o pedido já estava aprovado.";
+  }
+  if (statusExemplar === "RESERVADO") return "O exemplar ficou reservado para o 1º da fila de espera.";
+  return "";
 }
 
 /** Formata ISO date-time do Java para dd/mm/aaaa. */
@@ -111,4 +118,20 @@ export function diasDeAtraso(dataPrevista?: string | null): number {
   const hoje = Date.now();
   if (hoje <= prev) return 0;
   return Math.floor((hoje - prev) / (1000 * 60 * 60 * 24));
+}
+
+/**
+ * Busca todas as páginas de um endpoint paginado do servidor ({itens, totalPaginas}),
+ * para a TabelaPaginada paginar na tela. Usa o maior tamanho aceito (50).
+ */
+export async function todasAsPaginas<T>(
+  path: string,
+  params: Record<string, string | number | undefined | null> = {},
+): Promise<T[]> {
+  const itens: T[] = [];
+  for (let pagina = 0; ; pagina++) {
+    const p = await api.get<Pagina<T>>(path + qs({ ...params, pagina, tamanho: 50 }));
+    itens.push(...p.itens);
+    if (pagina + 1 >= p.totalPaginas) return itens;
+  }
 }

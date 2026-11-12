@@ -64,7 +64,8 @@ export interface Exemplar {
     | "EMPRESTADO"
     /** Emprestado e há fila do título nesta biblioteca. */
     | "EMPRESTADO_RESERVADO"
-    | "RESERVADO";
+    | "RESERVADO"
+    | "EM_TRANSFERENCIA";
   /** NOVO | BOM | USADO */
   estadoConservacao?: string;
 }
@@ -110,15 +111,38 @@ export interface Reserva {
   id: number;
   livro: Livro;
   usuario: Usuario;
-  /** Biblioteca da fila, onde também é feita a retirada. */
+  /** Biblioteca onde o usuário está na fila (de onde o exemplar sai). */
   bibliotecaFila: Biblioteca;
+  /** Biblioteca onde o usuário vai retirar (igual à da fila = sem transferência). */
+  bibliotecaDestino: Biblioteca;
   /** Exemplar separado quando o 1º da fila é atendido. */
   exemplar?: Exemplar | null;
   dataReserva: string;
   dataExpiracao: string;
   /** Posição na fila (devolvida ao criar a reserva). */
   posicaoFila?: number | null;
-  status: "PENDENTE" | "DISPONIVEL" | "RETIRADA" | "EXPIRADA" | "CANCELADA";
+  status:
+    | "PENDENTE"
+    | "AGUARDANDO_TRANSFERENCIA"
+    | "DISPONIVEL"
+    | "RETIRADA"
+    | "EXPIRADA"
+    | "CANCELADA";
+}
+
+/** Etapa do pedido de transferência de uma reserva (GET /api/reservas/minhas). */
+export interface TransferenciaDaReserva {
+  id: number;
+  status: SolicitacaoTransferencia["status"];
+  etapa:
+    | "PENDENTE"
+    | "PENDENTE_COM_EXEMPLAR"
+    | "APROVADA_AGUARDANDO_EXEMPLAR"
+    | "EM_TRANSITO"
+    | "CONCLUIDA"
+    | "REJEITADA"
+    | "CANCELADA";
+  descricao: string;
 }
 
 /** Item de GET /api/reservas/minhas (só reservas ativas do usuário do token). */
@@ -127,15 +151,18 @@ export interface MinhaReserva {
   livroId: number;
   titulo: string;
   autor: string;
-  /** Biblioteca da fila, onde também é feita a retirada. */
-  bibliotecaId: number;
-  biblioteca: string;
+  bibliotecaFilaId: number;
+  bibliotecaFila: string;
+  bibliotecaRetiradaId: number;
+  bibliotecaRetirada: string;
   /** Só quando PENDENTE. */
   posicao: number | null;
-  status: "PENDENTE" | "DISPONIVEL";
+  status: "PENDENTE" | "AGUARDANDO_TRANSFERENCIA" | "DISPONIVEL";
   dataReserva: string;
   /** Só quando DISPONIVEL. */
   retireAte: string | null;
+  /** Null quando a retirada sempre foi na própria biblioteca da fila. */
+  transferencia: TransferenciaDaReserva | null;
 }
 
 export interface MeuEmprestimo {
@@ -172,4 +199,112 @@ export interface SituacaoUsuario {
   bloqueadoAte?: string | null;
   apto: boolean;
   motivo: string;
+}
+
+/** Item de GET /api/reservas/destinos e /api/transferencias/destinos-avulsa. */
+export interface DestinoRetirada {
+  bibliotecaId: number;
+  nome: string;
+  permitido: boolean;
+  /** Por que a biblioteca não pode ser escolhida (null quando permitida). */
+  motivo: string | null;
+}
+
+export interface SolicitacaoTransferencia {
+  id: number;
+  /** Título sempre disponível, mesmo sem exemplar vinculado. */
+  livro: Livro;
+  /** Nulo enquanto a transferência "aguarda exemplar". */
+  exemplar: Exemplar | null;
+  bibliotecaOrigem: Biblioteca;
+  bibliotecaDestino: Biblioteca;
+  solicitante: Usuario;
+  aprovador?: Usuario | null;
+  reserva?: Reserva | null;
+  status:
+    | "PENDENTE"
+    | "APROVADA"
+    | "EM_TRANSITO"
+    | "CONCLUIDA"
+    | "REJEITADA"
+    | "CANCELADA";
+  dataSolicitacao: string;
+  dataConclusao?: string | null;
+  observacoes?: string;
+}
+
+/** Resposta de GET /api/transferencias/resumo. */
+export interface ResumoTransferencias {
+  pendentes: number;
+  aguardandoExemplar: number;
+  emTransito: number;
+  concluidas: number;
+  rejeitadas: number;
+}
+
+/** Página do backend (pagina começa em 0). */
+export interface Pagina<T> {
+  itens: T[];
+  pagina: number;
+  tamanho: number;
+  totalItens: number;
+  totalPaginas: number;
+}
+
+/** Referência curta (id + nome) usada nos DTOs de transferência. */
+export interface Ref {
+  id: number;
+  nome: string;
+}
+
+/** Item de GET /api/transferencias/pedidos-pendentes (Admin). */
+export interface PedidoPendente {
+  id: number;
+  livroId: number;
+  titulo: string;
+  autor: string;
+  solicitante: Ref;
+  origem: Ref;
+  destino: Ref;
+  reservaId: number | null;
+  exemplarId: number | null;
+  /** RETIDO = exemplar já separado na origem; senão será vinculado na devolução. */
+  exemplar: "RETIDO" | "VINCULADO_NA_DEVOLUCAO";
+  descricaoExemplar: string;
+  /** Capacidade da origem: o próprio pedido não conta contra si. */
+  rn15: { total: number; abertas: number; permitido: boolean; motivo: string | null };
+  /** Motivo de o destino não poder receber (null = pode). */
+  bloqueioDestino: string | null;
+  dataSolicitacao: string;
+}
+
+export type EtapaTransferencia =
+  | "PENDENTE"
+  | "APROVADA"
+  | "APROVADA_AGUARDANDO_EXEMPLAR"
+  | "EM_TRANSITO"
+  | "CONCLUIDA"
+  | "REJEITADA"
+  | "CANCELADA";
+
+/** Linha de acompanhamento, "a receber" e "saindo". */
+export interface TransferenciaResumo {
+  id: number;
+  tipo: "RESERVA" | "AVULSA";
+  status: SolicitacaoTransferencia["status"];
+  etapa: EtapaTransferencia;
+  livroId: number;
+  titulo: string;
+  exemplarId: number | null;
+  origem: Ref;
+  destino: Ref;
+  solicitante: Ref | null;
+  aprovador: Ref | null;
+  reservaId: number | null;
+  /** Nome de quem vai retirar, enquanto a reserva estiver ativa. */
+  reservadoPara: string | null;
+  statusReserva: Reserva["status"] | null;
+  dataSolicitacao: string;
+  dataConclusao: string | null;
+  observacoes: string | null;
 }

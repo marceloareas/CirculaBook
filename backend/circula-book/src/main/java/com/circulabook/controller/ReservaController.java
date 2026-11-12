@@ -32,13 +32,26 @@ public class ReservaController {
         }
     }
 
-    /** UC03 — Entrar na fila. O usuário é sempre o do token. */
+    /**
+     * Tela de reserva — destinos possíveis para "retirar em outra biblioteca"
+     * (sem a própria biblioteca da fila), com o motivo de cada um bloqueado.
+     */
+    @GetMapping("/destinos")
+    public ResponseEntity<?> destinos(@RequestParam Long livroId, @RequestParam Long bibliotecaFilaId) {
+        try {
+            return ResponseEntity.ok(reservaService.destinosPossiveis(livroId, bibliotecaFilaId));
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
+
+    /** UC03 — Entrar na fila (e, se for o caso, pedir retirada em outra biblioteca). O usuário é sempre o do token. */
     @PostMapping
     public ResponseEntity<?> criar(@RequestBody ReservaRequestDTO req,
                                    @AuthenticationPrincipal Jwt jwt) {
         try {
             return ResponseEntity.ok(reservaService.criar(
-                req.getLivroId(), Ator.de(jwt).id(), req.getBibliotecaId()));
+                req.getLivroId(), Ator.de(jwt).id(), req.getBibliotecaFilaId(), req.getBibliotecaDestinoId()));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
