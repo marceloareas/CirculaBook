@@ -19,6 +19,8 @@ import MinhasReservas from "./pages/MinhasReservas";
 import RegistrarEmprestimo from "./pages/RegistrarEmprestimo";
 import RegistrarDevolucao from "./pages/RegistrarDevolucao";
 import CadastrarExemplar from "./pages/CadastrarExemplar";
+import TransferenciasBiblioteca from "./pages/TransferenciasBiblioteca";
+import TransferenciasAdmin from "./pages/TransferenciasAdmin";
 import AdminCatalogo from "./pages/AdminCatalogo";
 import AdminCategorias from "./pages/AdminCategorias";
 import AdminBibliotecas from "./pages/AdminBibliotecas";
@@ -45,16 +47,15 @@ export default function App() {
 
       {/* ── Bibliotecário ── */}
       <Route element={<RotaProtegida perfis={["BIBLIOTECARIO"]} />}>
-        <Route
-          path="/biblioteca/emprestimo"
-          element={<RegistrarEmprestimo />}
-        />
+        <Route path="/biblioteca/emprestimo" element={<RegistrarEmprestimo />} />
         <Route path="/biblioteca/devolucao" element={<RegistrarDevolucao />} />
         <Route path="/biblioteca/exemplares" element={<CadastrarExemplar />} />
+        <Route path="/biblioteca/transferencias" element={<TransferenciasBiblioteca />} />
       </Route>
 
       {/* ── Administrador ── */}
       <Route element={<RotaProtegida perfis={["ADMIN"]} />}>
+        <Route path="/admin/transferencias" element={<TransferenciasAdmin />} />
         <Route path="/admin/catalogo" element={<AdminCatalogo />} />
         <Route path="/admin/categorias" element={<AdminCategorias />} />
         <Route path="/admin/bibliotecas" element={<AdminBibliotecas />} />
@@ -65,10 +66,7 @@ export default function App() {
       <Route
         path="*"
         element={
-          <Navigate
-            to={usuario ? TELA_INICIAL[usuario.perfil] : "/login"}
-            replace
-          />
+          <Navigate to={usuario ? TELA_INICIAL[usuario.perfil] : "/login"} replace />
         }
       />
     </Routes>
