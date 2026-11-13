@@ -1,10 +1,11 @@
 /**
  * TELA 6 — Registrar Devolução (UC10).
  * Mostra o cálculo de atraso e o bloqueio resultante (RN12) antes de confirmar.
- * Se houver fila do título, o exemplar fica reservado para o 1º da fila.
+ * Se houver fila do título, o exemplar fica reservado para o 1º da fila; se esse 1º
+ * pediu retirada em outra biblioteca e o pedido já foi aprovado, o exemplar segue em transferência.
  */
 import { useEffect, useState } from "react";
-import { api, nomeExemplar, diasDeAtraso, formatarData } from "../api/client";
+import { api, nomeExemplar, diasDeAtraso, formatarData, destinoAposDevolucao } from "../api/client";
 import type { Emprestimo } from "../types";
 import { useUsuarioLogado } from "../auth/contexto";
 import {
@@ -77,15 +78,13 @@ export default function RegistrarDevolucao() {
       const devolvido = await api.post<Emprestimo>("/emprestimos/devolver", {
         emprestimoId: selecionado.id,
       });
-      const comFila = devolvido?.exemplar?.status === "RESERVADO";
+      const destino = destinoAposDevolucao(devolvido?.exemplar?.status);
       setSucesso(
         (atraso > 0
           ? `Devolução registrada com ${atraso} dia(s) de atraso. ${selecionado.usuario.nome} ` +
               `ficou bloqueado por ${atraso * DIAS_BLOQUEIO_POR_ATRASO} dias.`
           : "Devolução registrada dentro do prazo.") +
-          (comFila
-            ? " O exemplar ficou reservado para o 1º da fila de espera, que tem 3 dias para retirá-lo."
-            : " O exemplar voltou para o acervo (disponível)."),
+          (destino ? ` ${destino}` : " O exemplar voltou para o acervo (disponível)."),
       );
       setSelecionado(null);
       carregar();
@@ -201,7 +200,7 @@ export default function RegistrarDevolucao() {
                 {atraso * DIAS_BLOQUEIO_POR_ATRASO} dias.
               </Callout>
             ) : (
-              <Callout tipo="sucesso" titulo="Devolução dentro do prazo">
+              <Callout tipo="info" titulo="Devolução dentro do prazo">
                 Nenhuma penalidade será aplicada a este usuário.
               </Callout>
             )}
@@ -212,7 +211,8 @@ export default function RegistrarDevolucao() {
             >
               Sem fila de espera, o exemplar volta para DISPONÍVEL. Se houver
               reserva pendente nesta biblioteca, ele fica RESERVADO para o 1º da
-              fila, que tem 3 dias para retirá-lo.
+              fila. Se esse leitor pediu retirada em outra biblioteca e o pedido
+              já foi aprovado, o exemplar sai direto em transferência.
             </Callout>
 
             <CardResumo
